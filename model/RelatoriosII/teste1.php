@@ -1,0 +1,1 @@
+<img src="grafico2.php" />

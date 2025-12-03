@@ -1,0 +1,79 @@
+<?php
+
+//---- ABRIR ARQUIVO----
+// chamando a classe do insert
+// dentro da classe insert eu chamo a conexao
+include '../model/Migracao.php';
+
+/*
+ * Funções Wsouza
+ */
+include 'funcoes/wsouza.php';
+
+include 'funcoes/importa_escola00.php';
+include 'funcoes/importa_turma20.php';
+//include 'funcoes/importa_escola10.php';
+include 'funcoes/importa_pessoas30.php';
+
+/*
+ * Pegando o arquivo direto em uma pasta na unidade C:
+ * crie esta pasta e salve o arquivo de importação nela
+ * com o nome arquivo.txt
+ */
+
+//http://10.4.3.100/sipfmigrar2020/controller/Migrar_all.php
+//$file = fopen("C:/wsouzalocal1/htdocs/sipfmigrar2020/arq/mulungu.txt", "r");
+//$file = fopen("C:/wsouzalocal1/htdocs/sipfmigrar2020/arq/serradosaimores.txt", "r");
+//$file = fopen("C:/wsouzalocal1/htdocs/sipfmigrar2020/arq/bomjesusdalapa.txt", "r");
+//$file = fopen("C:/wsouzalocal1/htdocs/sipfmigrar2020/arq/tremedal.txt", "r");
+$file = fopen("C:/wsouzalocal1/htdocs/sipfmigrar2020/arq/lajedinho.txt", "r");
+
+/*
+ * 
+ */
+
+$idPessoa2 = 1;
+$idPessoa = 1;
+$arrayusuario = [];
+// ler arquivo ate o fim
+while (!feof($file)) {
+
+    //lê a linha que esta no ponteiro
+    $linha = fgets($file, 4096);
+    
+    $aCampos2 = explode("|", '|' . $linha);
+    
+    //dados escola
+    if (substr($linha, 0, 2) == '00') {
+        // envio a linha para a função que irá inserir a escola
+        $idPessoa1 = escola00($linha);
+    }
+    
+    //turma
+    if (substr($linha, 0, 2) == '20') {
+        // envio a linha para a função que irá inserir a escola
+        $idturma = turma20($linha);
+    }
+
+    //evitando duplicidade
+    if (!in_array($aCampos2[4], $arrayusuario)) {
+
+        // PROFISSIONAIS
+        if (substr($linha, 0, 2) == '30') {
+            // envio a linha para a função que irá inserir a escola
+            $idPessoa = profissionais30($linha);
+            array_push($arrayusuario, $idPessoa);
+        }
+        
+    }
+    
+}
+
+fclose($file);
+
+echo "<br>";
+echo "<pre>";
+print_r($arrayusuario);
+echo "</pre>";
+
+

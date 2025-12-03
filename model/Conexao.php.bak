@@ -1,0 +1,18 @@
+<?php
+
+abstract class Conexao {
+
+    private static $con = null;
+
+    public static function getConexao() {
+        if (self::$con === null) {
+            //self::$con = new PDO("pgsql:host=localhost;port=5437;dbname=imp_planaltino", "postgres", "221122");
+            //self::$con = new PDO("pgsql:host=localhost;port=5437;dbname=imp_mulungu", "postgres", "221122");
+            //self::$con = new PDO("pgsql:host=localhost;port=5437;dbname=imp_serradosaimores", "postgres", "221122");
+            self::$con = new PDO("pgsql:host=localhost;port=5437;dbname=imp_tremedal", "postgres", "221122");
+            self::$con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        }
+        return self::$con;
+    }
+
+}
