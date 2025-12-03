@@ -71,6 +71,19 @@ $registrosProcessados = [
     '20' => 0,
     '30' => 0,
 ];
+$importacaoConcluida = false;
+
+register_shutdown_function(function () use (&$importacaoConcluida, &$linhaNumero, &$errosImportacao) {
+    $fatal = error_get_last();
+    if ($fatal !== null && !$importacaoConcluida) {
+        $errosImportacao[] = [
+            'linha' => $linhaNumero,
+            'tipo' => 'Execução',
+            'mensagem' => 'Script finalizado antes do término: ' . $fatal['message'],
+        ];
+        echo "<p style='color: red;'><strong>Importação interrompida inesperadamente.</strong> Última linha processada: {$linhaNumero}. Detalhes: {$fatal['message']}</p>";
+    }
+});
 
 echo "<h3>Iniciando importação do arquivo Educacenso 2024</h3>";
 
@@ -156,6 +169,17 @@ while (($linha = fgets($file, 4096)) !== false) {
         }
     }
 
+}
+
+$importacaoConcluida = feof($file);
+
+if (!$importacaoConcluida) {
+    $errosImportacao[] = [
+        'linha' => $linhaNumero,
+        'tipo' => 'Execução',
+        'mensagem' => 'Processo encerrado antes do fim do arquivo. Verifique limitações de tempo ou memória.',
+    ];
+    echo "<p style='color: red;'><strong>Aviso:</strong> O arquivo não foi lido até o fim. Última linha processada: {$linhaNumero}.</p>";
 }
 
 fclose($file);
