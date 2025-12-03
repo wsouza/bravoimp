@@ -36,7 +36,7 @@ include '../model/Migracao.php';
 53	"Distrito Federal"	"DF"
 99	"Exterior"	"XX"
 */
-$estadoImporte = 31;
+$estadoImporte = 26; // informar o estado de importação
  
 /*
  * Pegando o arquivo direto em uma pasta na unidade C:
@@ -44,18 +44,14 @@ $estadoImporte = 31;
  * com o nome arquivo.txt
  */
 
-//https://wsouza.unibravo.com.br/sipfmigrar2023/controller/Migrar_all.php
-$file = fopen("/home/wsouza/web/sipfmigrar2023/arq/lagoagrandepe.txt", "r");
+//https://wsouza.unibravo.com.br/bravoimp/controller/Migrar_all.php
+$file = fopen("/home/wsouza/web/bravoimp/arq/lagoagrandepe.txt", "r");
 
 include 'funcoes/wsouza.php';
 
-include 'funcoes/importa_escola00.php';
-
-include 'funcoes/importa_turma20.php';
-
-//include 'funcoes/importa_escola10.php';
-
-include 'funcoes/importa_pessoas30.php';
+include 'funcoes/2024/importa_escola00.php';
+include 'funcoes/2024/importa_turma20.php';
+include 'funcoes/2024/importa_pessoas30.php';
 
 /*
  * 
