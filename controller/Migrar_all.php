@@ -60,43 +60,152 @@ include 'funcoes/2024/importa_pessoas30.php';
 $idPessoa2 = 1;
 $idPessoa = 1;
 $arrayusuario = [];
-// ler arquivo ate o fim
-while (!feof($file)) {
+$errosImportacao = [];
+$totalEscolas = 0;
+$totalTurmas = 0;
+$totalPessoas = 0;
+$duplicadosPessoas = 0;
+$linhaNumero = 0;
+$registrosProcessados = [
+    '00' => 0,
+    '20' => 0,
+    '30' => 0,
+];
+$importacaoConcluida = false;
 
-    //lê a linha que esta no ponteiro
-    $linha = fgets($file, 4096);
-    
-    $aCampos2 = explode("|", '|' . $linha);
-    
-    //dados escola
-    if (substr($linha, 0, 2) == '00') {
-        // envio a linha para a função que irá inserir a escola
-        $idPessoa1 = escola00($linha);
+register_shutdown_function(function () use (&$importacaoConcluida, &$linhaNumero, &$errosImportacao) {
+    $fatal = error_get_last();
+    if ($fatal !== null && !$importacaoConcluida) {
+        $errosImportacao[] = [
+            'linha' => $linhaNumero,
+            'tipo' => 'Execução',
+            'mensagem' => 'Script finalizado antes do término: ' . $fatal['message'],
+        ];
+        echo "<p style='color: red;'><strong>Importação interrompida inesperadamente.</strong> Última linha processada: {$linhaNumero}. Detalhes: {$fatal['message']}</p>";
     }
-    
-    //turma
-    if (substr($linha, 0, 2) == '20') {
+});
+
+echo "<h3>Iniciando importação do arquivo Educacenso 2024</h3>";
+
+// ler arquivo ate o fim
+while (($linha = fgets($file, 4096)) !== false) {
+    $linhaNumero++;
+
+    $linhaTrim = trim($linha);
+    if ($linhaTrim === '') {
+        continue;
+    }
+
+    $aCampos2 = explode("|", '|' . $linhaTrim);
+    $tipoRegistro = substr($linhaTrim, 0, 2);
+
+    if (isset($registrosProcessados[$tipoRegistro])) {
+        $registrosProcessados[$tipoRegistro]++;
+    }
+
+    //dados escola
+    if ($tipoRegistro === '00') {
         // envio a linha para a função que irá inserir a escola
-        $idturma = turma20($linha);
+        try {
+            $idPessoa1 = escola00($linhaTrim);
+            $totalEscolas++;
+            echo "Linha {$linhaNumero}: Escola importada (ID {$idPessoa1}).<br>";
+        } catch (Throwable $th) {
+            $errosImportacao[] = [
+                'linha' => $linhaNumero,
+                'tipo' => 'Escola',
+                'mensagem' => $th->getMessage()
+            ];
+        }
+    }
+
+    //turma
+    if ($tipoRegistro === '20') {
+        // envio a linha para a função que irá inserir a escola
+        try {
+            $idturma = turma20($linhaTrim);
+            $totalTurmas++;
+            echo "Linha {$linhaNumero}: Turma importada (ID {$idturma}).<br>";
+        } catch (Throwable $th) {
+            $errosImportacao[] = [
+                'linha' => $linhaNumero,
+                'tipo' => 'Turma',
+                'mensagem' => $th->getMessage()
+            ];
+        }
     }
 
     //evitando duplicidade
-    if (!in_array($aCampos2[4], $arrayusuario)) {
+    if ($tipoRegistro === '30') {
+        $identificador = $aCampos2[4] ?? null;
+
+        if ($identificador === null) {
+            $errosImportacao[] = [
+                'linha' => $linhaNumero,
+                'tipo' => 'Pessoa física',
+                'mensagem' => 'Identificador da pessoa não encontrado na linha.'
+            ];
+            continue;
+        }
+
+        if (in_array($identificador, $arrayusuario)) {
+            $duplicadosPessoas++;
+            echo "Linha {$linhaNumero}: Pessoa física duplicada ignorada (identificador {$identificador}).<br>";
+            continue;
+        }
 
         // PROFISSIONAIS
-        if (substr($linha, 0, 2) == '30') {
-            // envio a linha para a função que irá inserir a escola
-            $idPessoa = profissionais30($linha);
-            array_push($arrayusuario, $idPessoa);
+        try {
+            $idPessoa = profissionais30($linhaTrim);
+            $totalPessoas++;
+            array_push($arrayusuario, $identificador);
+            echo "Linha {$linhaNumero}: Pessoa física importada (ID {$idPessoa}).<br>";
+        } catch (Throwable $th) {
+            $errosImportacao[] = [
+                'linha' => $linhaNumero,
+                'tipo' => 'Pessoa física',
+                'mensagem' => $th->getMessage()
+            ];
         }
-        
     }
-    
+
+}
+
+$importacaoConcluida = feof($file);
+
+if (!$importacaoConcluida) {
+    $errosImportacao[] = [
+        'linha' => $linhaNumero,
+        'tipo' => 'Execução',
+        'mensagem' => 'Processo encerrado antes do fim do arquivo. Verifique limitações de tempo ou memória.',
+    ];
+    echo "<p style='color: red;'><strong>Aviso:</strong> O arquivo não foi lido até o fim. Última linha processada: {$linhaNumero}.</p>";
 }
 
 fclose($file);
 
-echo "<br>";
+echo "<hr>";
+echo "<h3>Resumo da importação</h3>";
+echo "<ul>";
+echo "<li>Escolas importadas: {$totalEscolas}</li>";
+echo "<li>Turmas importadas: {$totalTurmas}</li>";
+echo "<li>Pessoas físicas importadas: {$totalPessoas}</li>";
+echo "<li>Registros lidos - 00: {$registrosProcessados['00']}, 20: {$registrosProcessados['20']}, 30: {$registrosProcessados['30']}</li>";
+echo "<li>Pessoas físicas ignoradas por duplicidade: {$duplicadosPessoas}</li>";
+echo "</ul>";
+
+if (!empty($errosImportacao)) {
+    echo "<h4>Ocorrências durante a importação</h4>";
+    echo "<ol>";
+    foreach ($errosImportacao as $erro) {
+        echo "<li><strong>Linha {$erro['linha']}</strong> ({$erro['tipo']}): {$erro['mensagem']}</li>";
+    }
+    echo "</ol>";
+} else {
+    echo "<p>Importação concluída sem erros.</p>";
+}
+
+echo "<h4>Identificadores de pessoas processados (para depuração)</h4>";
 echo "<pre>";
 print_r($arrayusuario);
 echo "</pre>";
